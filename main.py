@@ -24,13 +24,13 @@ disp = TFT.ST7789(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz=SPI_SPEED_HZ
 
 fnt = ImageFont.truetype("fonts/FreeMonoBold.otf", 30)
 
-# Initialize display.
+
 disp.begin()
 
-# Clear display.
+
 disp.clear()
 
-# Set GPIO pin numbering mode
+
 GPIO.setmode(GPIO.BCM)
 
 def expand2square(pil_img, background_color):
@@ -46,36 +46,41 @@ def expand2square(pil_img, background_color):
         result.paste(pil_img, ((height - width) // 2, 0))
         return result
 
-# Clear output and display a purple background
 
-def HandleMenu(op):
+
+def HandleMenu(op, submenu_active):
     symbols = [" ", " ", " ", " ", " "]
 
-    if op is not None:
+    if op is not None and op < 5:
         symbols[op] = ">"
+
+    if not submenu_active:
+        symbols[0] = ">"
+        if(op != 0):
+            symbols[0] = " "
 
     return symbols
 
-# Example usage
+
 
 def read_button_states(pins, op):
-    # Set the pins as inputs with pull-up resistors
+  
     for pin in pins:
         GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-    # Read the states of the buttons
+  
     button_states = {}
     for pin in pins:
         button_states[pin] = GPIO.input(pin)
 
-    # Process the button states
+    
     return process_button_states(button_states, op)
 
 def process_button_states(button_states, op):
     for pin, state in button_states.items():
-        if state == GPIO.LOW:  # Button is pressed (GPIO.LOW indicates a button press)
+        if state == GPIO.LOW:  
             if pin == 26:
-                return "back"
+                return 2626
             
             elif pin == 23:
                 op -= 1
@@ -94,36 +99,65 @@ def process_button_states(button_states, op):
             elif pin == 6:
                 return "right"
             elif pin == 5:
-                return "ok"
+                return 555
 
     return op
 
 
-current_option = 0  # Variable to store the current option
+current_option = 0 
 
 def HandleMainCode():
     button_pins = [5, 6, 26, 25, 23, 24]
-    option = 0  # Initialize option variable
+    option = 0  
+    submenu_active = False  
 
+    
     while True:
-        option = read_button_states(button_pins, option)  # Pass option to read_button_states
+        if not submenu_active:
+            option = read_button_states(button_pins, option)  
+            symbols = HandleMenu(option, submenu_active)
 
-        symbols = HandleMenu(option)
+            with Image.open("black.png").convert("RGBA") as base:
+                txt = Image.new("RGBA", (disp.width, disp.height), (255, 255, 255, 1))
+                d = ImageDraw.Draw(txt)
 
-        with Image.open("black.png").convert("RGBA") as base:
-            txt = Image.new("RGBA", (disp.width, disp.height), (255, 255, 255, 1))
-            d = ImageDraw.Draw(txt)
+                menu_items = ["NFC", "125 KHz", "Sub-1 GHz", "IR", ":)"]
 
-            menu_items = ["NFC", "125 KHz", "Sub-1 GHz", "IR", ":)"]
+                for i, item in enumerate(menu_items):
+                    symbol = symbols[i]
+                    d.text((5, 5 + i * 50), f"{symbol}{item}", font=fnt, fill=(0, 255, 0, 255)) 
 
-            for i, item in enumerate(menu_items):
-                symbol = symbols[i]
-                d.text((5, 5 + i * 50), f"{symbol}{item}", font=fnt, fill=(0, 255, 0, 255))  # hacker green
+                base = base.resize((disp.width, disp.height))
+                txt = txt.resize((disp.width, disp.height))
+                out = Image.alpha_composite(base, txt)
+                disp.display(out)
 
-            base = base.resize((disp.width, disp.height))
-            txt = txt.resize((disp.width, disp.height))
-            out = Image.alpha_composite(base, txt)
-            disp.display(out)
+                if option == 555: 
+                    submenu_active = True  
+                    time.sleep(0.2) 
+
+        elif op == 0 and submenu_active:
+            # Display the submenu
+            with Image.open("black.png").convert("RGBA") as base:
+                txt = Image.new("RGBA", (disp.width, disp.height), (255, 255, 255, 1))
+                d = ImageDraw.Draw(txt)
+
+                submenu_items = ["Saved", "Read", "Write" , "Emulate"]
+
+                for i, item in enumerate(submenu_items):
+                    d.text((5, 5 + i * 50), item, font=fnt, fill=(0, 255, 0, 255)) 
+
+                base = base.resize((disp.width, disp.height))
+                txt = txt.resize((disp.width, disp.height))
+                out = Image.alpha_composite(base, txt)
+                disp.display(out)
+
+            submenu_option = read_button_states(button_pins, None)
+
+            if submenu_option == 2626:
+                submenu_active = False 
+                symbols = HandleMenu(option, submenu_active)
+        
 
 if __name__ == '__main__':
     op = 0
