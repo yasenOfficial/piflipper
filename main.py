@@ -86,12 +86,16 @@ def process_button_states(button_states, op):
                 op -= 1
                 if op < 0:
                     op = 0
+                elif op > 4:
+                    op = 4
                 return op
             
             elif pin == 24:
                 op += 1
                 if op > 4:
                     op = 4
+                elif op < 0:
+                    op = 0
                 return op
             
             elif pin == 25:
@@ -100,8 +104,13 @@ def process_button_states(button_states, op):
                 return "right"
             elif pin == 5:
                 return 555
-
-    return op
+            
+    if op == 555 or op == 2626:
+        return 0
+    else:
+        return op
+    time.sleep(0.1)
+    
 
 
 current_option = 0 
@@ -110,12 +119,16 @@ def HandleMainCode():
     button_pins = [5, 6, 26, 25, 23, 24]
     option = 0  
     submenu_active = False  
+    OpHasPermittion = False
 
     
     while True:
         if not submenu_active:
-            option = read_button_states(button_pins, option)  
-            symbols = HandleMenu(option, submenu_active)
+            if not OpHasPermittion:
+                option = read_button_states(button_pins, option)  
+                symbols = HandleMenu(option, submenu_active)
+            else:
+                OpHasPermittion = False
 
             with Image.open("black.png").convert("RGBA") as base:
                 txt = Image.new("RGBA", (disp.width, disp.height), (255, 255, 255, 1))
@@ -134,9 +147,10 @@ def HandleMainCode():
 
                 if option == 555: 
                     submenu_active = True  
+                    option = 0
                     time.sleep(0.2) 
 
-        elif op == 0 and submenu_active:
+        elif option == 0 and submenu_active:
             # Display the submenu
             with Image.open("black.png").convert("RGBA") as base:
                 txt = Image.new("RGBA", (disp.width, disp.height), (255, 255, 255, 1))
@@ -154,12 +168,13 @@ def HandleMainCode():
 
             submenu_option = read_button_states(button_pins, None)
 
-            if submenu_option == 2626:
+            if submenu_option == 2626 and submenu_active != False:
                 submenu_active = False 
+                option = 0
+                OpHasPermittion = True
                 symbols = HandleMenu(option, submenu_active)
         
 
 if __name__ == '__main__':
     op = 0
-    while True:
-        HandleMainCode()
+    HandleMainCode()
