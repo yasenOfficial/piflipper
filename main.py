@@ -48,16 +48,13 @@ def expand2square(pil_img, background_color):
 
 
 
-def HandleMenu(op, submenu_active):
+def HandleMenu(op):
     symbols = [" ", " ", " ", " ", " "]
 
     if op is not None and op < 5:
         symbols[op] = ">"
 
-    if not submenu_active:
-        symbols[0] = ">"
-        if(op != 0):
-            symbols[0] = " "
+   
 
     return symbols
 
@@ -118,17 +115,23 @@ current_option = 0
 def HandleMainCode():
     button_pins = [5, 6, 26, 25, 23, 24]
     option = 0  
+    sub_option = 0
     submenu_active = False  
     OpHasPermittion = False
-
+    last_option = None
     
     while True:
         if not submenu_active:
+            
+
             if not OpHasPermittion:
                 option = read_button_states(button_pins, option)  
-                symbols = HandleMenu(option, submenu_active)
+                symbols = HandleMenu(option)
             else:
                 OpHasPermittion = False
+
+            if option <= 4 and option >= 0:
+                last_option = option
 
             with Image.open("black.png").convert("RGBA") as base:
                 txt = Image.new("RGBA", (disp.width, disp.height), (255, 255, 255, 1))
@@ -148,31 +151,40 @@ def HandleMainCode():
                 if option == 555: 
                     submenu_active = True  
                     option = 0
-                    time.sleep(0.2) 
 
-        elif option == 0 and submenu_active:
+        elif last_option == 0 and submenu_active:
             # Display the submenu
+            sub_option = read_button_states(button_pins, sub_option)  
+            symbols = HandleMenu(sub_option)
+
+
             with Image.open("black.png").convert("RGBA") as base:
                 txt = Image.new("RGBA", (disp.width, disp.height), (255, 255, 255, 1))
                 d = ImageDraw.Draw(txt)
 
-                submenu_items = ["Saved", "Read", "Write" , "Emulate"]
+                menu_items = ["Saved", "Read", "Write", "Emulate", ":)"]
 
-                for i, item in enumerate(submenu_items):
-                    d.text((5, 5 + i * 50), item, font=fnt, fill=(0, 255, 0, 255)) 
+                for i, item in enumerate(menu_items):
+                    symbol = symbols[i]
+                    d.text((5, 5 + i * 50), f"{symbol}{item}", font=fnt, fill=(0, 255, 0, 255)) 
 
                 base = base.resize((disp.width, disp.height))
                 txt = txt.resize((disp.width, disp.height))
                 out = Image.alpha_composite(base, txt)
                 disp.display(out)
 
-            submenu_option = read_button_states(button_pins, None)
+                if option == 555: 
+                    submenu_active = True  
+                    option = 0
+                    time.sleep(0.2) 
+
+            submenu_option = read_button_states(button_pins, 0)
 
             if submenu_option == 2626 and submenu_active != False:
                 submenu_active = False 
                 option = 0
                 OpHasPermittion = True
-                symbols = HandleMenu(option, submenu_active)
+                symbols = HandleMenu(option)
         
 
 if __name__ == '__main__':
